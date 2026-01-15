@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-5">
+    <h2>Mis Pedidos</h2>
+    {% if orders %}
+    <div class="list-group mt-4">
+        {% for order in orders %}
+        <div class="list-group-item">
+            <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">Pedido #{{ order.id }}</h5>
+                <small>{{ order.date_created.strftime('%d/%m/%Y') }}</small>
+            </div>
+            <p class="mb-1">Total: <strong>${{ order.total_price }}</strong></p>
+            <small>Estado: <span class="badge bg-warning text-dark">{{ order.status }}</span></small>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>Todavía no hiciste ninguna compra.</p>
+    {% endif %}
+</div>
+{% endblock %}

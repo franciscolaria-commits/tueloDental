@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="bg-light py-5 mb-5 text-center shadow-sm">
+    <div class="container">
+        <h1 class="display-4 fw-bold">Ofertas de Verano</h1>
+        <p class="lead text-muted">Descubrí la nueva colección con hasta 30% OFF</p>
+        <a href="#" class="btn btn-primary btn-lg mt-3">Ver Todo</a>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <div class="row">
+        <div class="col-md-3 d-none d-md-block">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white fw-bold">Categorías</div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item list-group-item-action"><a href="#"
+                            class="text-decoration-none text-dark">Ropa de Hombre</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="#"
+                            class="text-decoration-none text-dark">Ropa de Mujer</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="#"
+                            class="text-decoration-none text-dark">Zapatillas</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="#"
+                            class="text-decoration-none text-dark">Accesorios</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Destacados</h4>
+                <select class="form-select w-auto">
+                    <option selected>Ordenar por: Relevancia</option>
+                    <option value="1">Menor Precio</option>
+                    <option value="2">Mayor Precio</option>
+                </select>
+            </div>
+
+            <div class="row row-cols-1 row-cols-md-3 g-4">
+                {% for product in products %}
+                <div class="col">
+                    <div class="card h-100 shadow-sm border-0">
+                        <img src="{{ product.image_url or 'https://via.placeholder.com/300' }}" class="card-img-top"
+                            alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
+                        <div class="card-body">
+                            <h5 class="card-title fs-6">{{ product.name }}</h5>
+                            <p class="card-text text-muted small text-truncate">{{ product.description }}</p>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <span class="fw-bold fs-5 text-dark">${{ product.price }}</span>
+                                <a href="{{ url_for('shop.add_to_cart', product_id=product.id) }}"
+                                    class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-cart-plus"></i> Agregar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-12 text-center py-5">
+                    <p class="text-muted">No hay productos cargados todavía.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

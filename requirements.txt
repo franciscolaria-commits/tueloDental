@@ -1,0 +1,9 @@
+Flask
+mysql-connector-python
+python-dotenv
+Flask-SQLAlchemy
+Flask-Login
+email_validator
+mercadopago
+psycopg2-binary
+gunicorn

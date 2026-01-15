@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: flask_ecommerce_app
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_DEBUG=1
+      - MYSQL_HOST=db
+      - MYSQL_USER=ecommerce_user
+      - MYSQL_PASSWORD=secret_password
+      - MYSQL_DB=ecommerce_db
+      - MP_ACCESS_TOKEN=APP_USR-1406867289039041-011308-01d185d294d784192a9ad6af84807a51-3130462005
+      - MP_PUBLIC_KEY=APP_USR-6b1bb09e-fd95-44eb-bd86-43d0a5795a96
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    container_name: mysql_ecommerce_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secret
+      MYSQL_DATABASE: ecommerce_db
+      MYSQL_USER: ecommerce_user
+      MYSQL_PASSWORD: secret_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:

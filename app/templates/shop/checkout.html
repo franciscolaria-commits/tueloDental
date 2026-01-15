@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-5 text-center">
+    <h2>Confirmar Pedido</h2>
+    <p class="lead">Estás a un paso de finalizar tu compra.</p>
+    <div class="card mx-auto shadow-sm" style="max-width: 500px;">
+        <div class="card-body">
+            <h4 class="mb-3">Total a Pagar: ${{ total_price }}</h4>
+            <p>Se enviará el detalle a: <strong>{{ current_user.email }}</strong></p>
+            <form method="POST">
+                <button type="submit" class="btn btn-success btn-lg w-100">CONFIRMAR COMPRA</button>
+            </form>
+            <a href="{{ url_for('shop.view_cart') }}" class="btn btn-link mt-2">Volver al carrito</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <h2>¡Orden #{{ order.id }} creada!</h2>
+    <p class="lead">Solo falta realizar el pago para confirmar.</p>
+
+    <div class="card mx-auto shadow-sm mt-4" style="max-width: 500px;">
+        <div class="card-body">
+            <h3 class="mb-4">Total: ${{ order.total_price }}</h3>
+
+            <div id="wallet_container"></div>
+
+            <a href="{{ url_for('shop.my_orders') }}" class="btn btn-link mt-3">Pagar más tarde</a>
+        </div>
+    </div>
+</div>
+
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+
+<script>
+    // Inicializamos con tu PUBLIC KEY (La que pusiste en el docker-compose pero visible)
+    // OJO: Acá necesitamos pasar la variable de entorno al JS. 
+    // Por simplicidad para el MVP, pegá tu PUBLIC KEY DE PRUEBA acá abajo entre comillas:
+    const mp = new MercadoPago("APP_USR-6b1bb09e-fd95-44eb-bd86-43d0a5795a96", {
+        locale: 'es-AR'
+    });
+
+    mp.bricks().create("wallet", "wallet_container", {
+        initialization: {
+            preferenceId: "{{ preference_id }}",
+        },
+        customization: {
+            texts: {
+                valueProp: 'smart_option',
+            },
+        },
+    });
+</script>
+{% endblock %}
