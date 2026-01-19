@@ -1,221 +1,241 @@
-from flask import Blueprint, render_template, session, redirect, url_for, flash, request
-from app.models import Product, Order, OrderItem
-from flask_login import current_user, login_required, logout_user
-from app import db
-import mercadopago 
 import os
+from flask import Blueprint, render_template, redirect, url_for, flash, session, request, current_app
+from flask_login import current_user, login_required
+from app.models import Product, Order, OrderItem
+from app import db
+import mercadopago
 
 shop_bp = Blueprint('shop', __name__)
-sdk = mercadopago.SDK(os.environ.get("MP_ACCESS_TOKEN"))
-# --- RUTAS PÚBLICAS ---
+
+# --- CONFIGURACIÓN SDK MERCADOPAGO ---
+def get_mp_sdk():
+    access_token = current_app.config['MP_ACCESS_TOKEN']
+    if not access_token:
+        print("⚠️ ADVERTENCIA: No hay MP_ACCESS_TOKEN configurado.")
+        return None
+    return mercadopago.SDK(access_token)
+
+# --- RUTAS DE NAVEGACIÓN (LAS QUE FALTABAN) ---
 
 @shop_bp.route('/')
+def landing():
+    # La portada puede mostrar todo o ser estática, la dejamos simple por ahora
+    return render_template('shop/landing.html')
+
+@shop_bp.route('/catalogo')
 def index():
-    products = Product.query.all()
-    return render_template('shop/index.html', products=products)
+    # 1. Obtener todas las categorías únicas para el menú lateral
+    # Esto devuelve una lista de tuplas [('General',), ('Insumos',)]
+    categories_query = db.session.query(Product.category).distinct().all()
+    # Las limpiamos para que sea una lista simple ['General', 'Insumos']
+    categories = [c[0] for c in categories_query if c[0]]
+
+    # 2. Verificamos si el usuario hizo clic en una categoría
+    category_filter = request.args.get('category')
+
+    if category_filter:
+        # FILTRAR: Solo mostramos los de esa categoría
+        products = Product.query.filter_by(category=category_filter).all()
+    else:
+        # MOSTRAR TODO
+        products = Product.query.all()
+
+    # 3. Enviamos todo al HTML: productos, la lista de categorías y cuál está seleccionada
+    return render_template(
+        'shop/index.html', 
+        products=products, 
+        categories=categories, 
+        current_category=category_filter
+    )
 
 @shop_bp.route('/product/<int:product_id>')
 def product_detail(product_id):
+    # Detalle del producto (También la recuperamos)
     product = Product.query.get_or_404(product_id)
     return render_template('shop/detail.html', product=product)
 
-# --- RUTAS DEL CARRITO ---
+# --- CARRITO DE COMPRAS (LÓGICA NUEVA MEJORADA) ---
 
 @shop_bp.route('/cart/add/<int:product_id>')
 def add_to_cart(product_id):
-    # 1. Buscamos el producto en la DB para saber cuánto stock real hay
     product = Product.query.get_or_404(product_id)
     
-    if 'cart' not in session:
-        session['cart'] = {}
-    
-    cart = session['cart']
-    product_id_str = str(product_id)
-
-    # 2. Vemos cuánto tiene ya en el carrito (si no tiene nada, es 0)
-    current_quantity_in_cart = cart.get(product_id_str, 0)
-
-    # 3. EL CHECKEO DE STOCK (La parte nueva)
-    # Si lo que quiere agregar supera lo que hay...
-    if current_quantity_in_cart + 1 > product.stock:
-        flash(f'¡No hay suficiente stock! Solo quedan {product.stock} unidades.', 'danger')
-        # Lo mandamos de vuelta sin sumar nada
+    # Verificación de si el producto existe y tiene stock base
+    if product.stock <= 0:
+        flash('¡Ups! Producto sin stock.', 'danger')
         return redirect(request.referrer or url_for('shop.index'))
 
-    # Si hay stock, procedemos normal
-    if product_id_str in cart:
-        cart[product_id_str] += 1
+    cart = session.get('cart', {})
+    str_id = str(product_id)
+    
+    current_qty = cart.get(str_id, 0)
+    
+    # Verificamos si al sumar 1 nos pasamos del stock real
+    if current_qty + 1 > product.stock:
+        flash(f'No podés agregar más. Solo quedan {product.stock} unidades.', 'warning')
     else:
-        cart[product_id_str] = 1
+        if str_id in cart:
+            cart[str_id] += 1
+        else:
+            cart[str_id] = 1
+        
+        session['cart'] = cart
+        flash(f'Agregaste {product.name} al carrito.', 'success')
     
-    session['cart'] = cart
-    session.modified = True
-    
-    flash('Producto agregado al carrito', 'success')
+    # Redirigimos a la misma página donde estaba (Catálogo o Detalle)
     return redirect(request.referrer or url_for('shop.index'))
 
 @shop_bp.route('/cart')
 def view_cart():
     cart = session.get('cart', {})
-    cart_items = []
-    total_price = 0
     
-    # Buscamos los productos reales en la DB basados en los IDs de la sesión
-    for p_id, quantity in cart.items():
-        product = Product.query.get(int(p_id))
-        if product:
-            subtotal = product.price * quantity
-            total_price += subtotal
-            cart_items.append({
-                'product': product,
-                'quantity': quantity,
-                'subtotal': subtotal
-            })
-            
-    return render_template('shop/cart.html', cart_items=cart_items, total_price=total_price)
+    if not cart:
+        return render_template('shop/cart.html', products=[], total=0, quantities={})
+    
+    # Buscamos los productos en la DB
+    products = Product.query.filter(Product.id.in_(cart.keys())).all()
+    
+    total = 0
+    for product in products:
+        qty = cart[str(product.id)]
+        total += product.price * qty
+    
+    # Pasamos 'quantities' para que funcionen los botones +/-
+    return render_template('shop/cart.html', products=products, total=total, quantities=cart)
+
+@shop_bp.route('/cart/update/<int:product_id>/<string:action>')
+def update_quantity(product_id, action):
+    cart = session.get('cart', {})
+    str_id = str(product_id)
+    
+    if str_id in cart:
+        product = Product.query.get(product_id)
+        
+        if action == 'increase':
+            if product and cart[str_id] < product.stock:
+                cart[str_id] += 1
+            else:
+                flash(f'¡No hay más stock disponible de {product.name}!', 'warning')
+        elif action == 'decrease':
+            if cart[str_id] > 1:
+                cart[str_id] -= 1
+        
+        session['cart'] = cart
+        
+    return redirect(url_for('shop.view_cart'))
 
 @shop_bp.route('/cart/remove/<int:product_id>')
 def remove_from_cart(product_id):
     cart = session.get('cart', {})
-    product_id_str = str(product_id)
+    str_id = str(product_id)
     
-    if product_id_str in cart:
-        del cart[product_id_str]
+    if str_id in cart:
+        del cart[str_id]
         session['cart'] = cart
-        session.modified = True
         flash('Producto eliminado.', 'info')
         
     return redirect(url_for('shop.view_cart'))
 
-@shop_bp.route('/cart/clear')
-def clear_cart():
-    session.pop('cart', None)
-    flash('Carrito vaciado.', 'info')
-    return redirect(url_for('shop.index'))
+# --- PROCESO DE PAGO (CHECKOUT) ---
 
 @shop_bp.route('/checkout', methods=['GET', 'POST'])
 @login_required
 def checkout():
-    # ... (Parte 1: Validaciones y armado de items igual que antes) ...
     cart = session.get('cart', {})
     if not cart:
-        flash('El carrito está vacío.', 'warning')
+        flash('El carrito está vacío', 'warning')
         return redirect(url_for('shop.index'))
     
-    total_price = 0
-    items_mp = [] 
-    items_db = [] 
-
-    for p_id, quantity in cart.items():
-        product = Product.query.get(p_id)
-        if not product or product.stock < quantity:
-            flash(f'Sin stock: {product.name}.', 'danger')
+    products = Product.query.filter(Product.id.in_(cart.keys())).all()
+    
+    # 1. VALIDACIÓN FINAL DE STOCK
+    for product in products:
+        quantity = cart[str(product.id)]
+        if product.stock < quantity:
+            flash(f'¡Ups! No hay suficiente stock de {product.name}. Solo quedan {product.stock}.', 'danger')
             return redirect(url_for('shop.view_cart'))
+
+    # 2. CREAR ORDEN
+    total_price = 0
+    items_mp = []
+    
+    order = Order(
+        user_id=current_user.id,
+        total_price=0,
+        status='pending'
+    )
+    db.session.add(order)
+    db.session.flush() 
+    
+    for product in products:
+        quantity = cart[str(product.id)]
+        total_price += product.price * quantity
         
-        subtotal = product.price * quantity
-        total_price += subtotal
-        items_db.append((product, quantity))
+        # 3. RESTAR STOCK (RESERVA)
+        product.stock -= quantity 
+
+        order_item = OrderItem(
+            order_id=order.id,
+            product_id=product.id,
+            quantity=quantity,
+            price_at_purchase=product.price
+        )
+        db.session.add(order_item)
+        
         items_mp.append({
-            "id": str(product.id),
             "title": product.name,
-            "quantity": int(quantity),
-            "unit_price": float(product.price),
-            "currency_id": "ARS" 
+            "quantity": quantity,
+            "currency_id": "ARS",
+            "unit_price": float(product.price)
         })
 
-    if request.method == 'POST':
-        # A. Crear orden en DB
-        order = Order(
-            user_id=current_user.id,
-            customer_name=current_user.username,
-            customer_email=current_user.email,
-            total_price=total_price,
-            status='pending'
-        )
-        db.session.add(order)
-        db.session.flush()
+    order.total_price = total_price
+    db.session.commit()
 
-        for product, quantity in items_db:
-            order_item = OrderItem(
-                order_id=order.id,
-                product_id=product.id,
-                product_name=product.name,
-                price=product.price,
-                quantity=quantity
-            )
-            product.stock -= quantity
-            db.session.add(order_item)
+    # 4. MERCADOPAGO
+    sdk = get_mp_sdk()
+    if not sdk:
+        flash('Error de configuración de MercadoPago', 'danger')
+        return redirect(url_for('shop.view_cart'))
 
-        db.session.commit()
+    base_url = current_app.config['BASE_URL'] 
+
+    preference_data = {
+        "items": items_mp,
+        "payer": {
+            "name": current_user.username,
+            "email": current_user.email
+        },
+        "back_urls": {
+            "success": f"{base_url}/payment/success",
+            "failure": f"{base_url}/payment/failure",
+            "pending": f"{base_url}/payment/pending"
+        },
+        "external_reference": str(order.id)
+    }
+
+    try:
+        preference_response = sdk.preference().create(preference_data)
+        preference = preference_response["response"]
         
-        # --- OJO: ACÁ BORRAMOS LA LÍNEA QUE BORRABA EL CARRITO ---
-        # session.pop('cart', None) <--- ESTO LO MOVEMOS MÁS ABAJO
-        # ---------------------------------------------------------
+        session.pop('cart', None)
+        
+        return render_template(
+            'shop/payment.html', 
+            preference_id=preference['id'], 
+            order=order
+        )
+        
+    except Exception as e:
+        print("🚨 ERROR MP:", e)
+        flash('Error al conectar con MercadoPago', 'danger')
+        return redirect(url_for('shop.view_cart'))
 
-        # B. MercadoPago
-        preference_data = {
-            "items": items_mp,
-            "payer": {
-                "name": current_user.username,
-                "email": current_user.email
-            },
-            "back_urls": {
-                "success": "http://127.0.0.1:5000/payment/success",
-                "failure": "http://127.0.0.1:5000/payment/failure",
-                "pending": "http://127.0.0.1:5000/payment/pending"
-            },
-            # "auto_return": "approved", 
-            "external_reference": str(order.id)
-        }
-
-        try:
-            preference_response = sdk.preference().create(preference_data)
-            preference = preference_response.get("response", {})
-
-            if "id" not in preference:
-                print("\n\n" + "="*50)
-                print("❌ ERROR DE MERCADOPAGO DETECTADO:")
-                print(preference_response) 
-                print("="*50 + "\n\n")
-                
-                # Rollback de stock porque falló
-                for product, quantity in items_db:
-                    product.stock += quantity
-                db.session.commit()
-
-                flash('Hubo un error al conectar con MercadoPago. Revisá la terminal.', 'danger')
-                return redirect(url_for('shop.view_cart'))
-            
-            # --- SI LLEGAMOS ACÁ, EL PAGO SE GENERÓ BIEN ---
-            # AHORA SÍ BORRAMOS EL CARRITO
-            session.pop('cart', None)
-            # -----------------------------------------------
-
-            return render_template('shop/payment.html', preference_id=preference["id"], order=order)
-
-        except Exception as e:
-            print(f"ERROR CRÍTICO MP: {e}")
-            flash('Error de conexión interno.', 'danger')
-            return redirect(url_for('shop.view_cart'))
-
-    return render_template('shop/checkout.html', total_price=total_price)
-# --- RUTAS DE RETORNO (Back URLs) ---
+# --- PÁGINAS DE RETORNO Y PERFIL ---
 
 @shop_bp.route('/payment/success')
 def payment_success():
-    # MP nos manda datos en la URL
-    payment_id = request.args.get('payment_id')
-    status = request.args.get('status')
-    order_id = request.args.get('external_reference') # Recuperamos el ID de orden
-    
-    if order_id:
-        order = Order.query.get(order_id)
-        if order:
-            order.status = 'paid' # ¡Confirmamos el pago!
-            db.session.commit()
-            flash(f'¡Pago Aprobado! ID: {payment_id}', 'success')
-            
-    return redirect(url_for('shop.my_orders'))
+    return render_template('shop/success.html')
 
 @shop_bp.route('/payment/failure')
 def payment_failure():
@@ -225,11 +245,12 @@ def payment_failure():
 @shop_bp.route('/payment/pending')
 def payment_pending():
     flash('El pago está pendiente de aprobación.', 'warning')
+    # Acá también daba error si no existía my_orders
     return redirect(url_for('shop.my_orders'))
 
 @shop_bp.route('/my-orders')
 @login_required
 def my_orders():
-    # Mostramos las órdenes del usuario logueado
+    # Historial de compras del usuario
     orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.date_created.desc()).all()
     return render_template('shop/my_orders.html', orders=orders)

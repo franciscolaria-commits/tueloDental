@@ -43,6 +43,35 @@
 # # # Usamos "python -m flask run" para desarrollo, configurando el host en 0.0.0.0 para que sea accesible desde fuera
 # # CMD ["python", "run.py"]
 # 1. Imagen base
+# FROM python:3.10-slim
+
+# # 2. Variables de entorno
+# ENV PYTHONDONTWRITEBYTECODE=1
+# ENV PYTHONUNBUFFERED=1
+
+# # 3. Directorio de trabajo
+# WORKDIR /app
+
+# # 4. Dependencias del sistema (Incluimos libpq-dev para Postgres)
+# RUN apt-get update \
+#     && apt-get install -y --no-install-recommends gcc default-libmysqlclient-dev pkg-config libpq-dev \
+#     && rm -rf /var/lib/apt/lists/*
+
+# # 5. Dependencias Python
+# COPY requirements.txt .
+# RUN pip install --upgrade pip
+# RUN pip install --no-cache-dir -r requirements.txt
+
+# # 6. Copiamos el código
+# COPY . .
+
+# # 7. Puerto (Render usa el 10000)
+# EXPOSE 10000
+
+# # 8. COMANDO DE ARRANQUE DIRECTO (Sin entrypoint.sh)
+# # Usamos Gunicorn, bindeamos al puerto 10000 y ejecutamos la app
+# CMD ["gunicorn", "--bind", "0.0.0.0:10000", "run:app"]
+# 1. Imagen base
 FROM python:3.10-slim
 
 # 2. Variables de entorno
@@ -52,9 +81,9 @@ ENV PYTHONUNBUFFERED=1
 # 3. Directorio de trabajo
 WORKDIR /app
 
-# 4. Dependencias del sistema (Incluimos libpq-dev para Postgres)
+# 4. Dependencias del sistema
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc default-libmysqlclient-dev pkg-config libpq-dev \
+    && apt-get install -y --no-install-recommends gcc default-libmysqlclient-dev pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # 5. Dependencias Python
@@ -65,9 +94,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 6. Copiamos el código
 COPY . .
 
-# 7. Puerto (Render usa el 10000)
-EXPOSE 10000
+# 7. Puerto (VOLVEMOS A 5000 PARA LOCAL)
+EXPOSE 5000
 
-# 8. COMANDO DE ARRANQUE DIRECTO (Sin entrypoint.sh)
-# Usamos Gunicorn, bindeamos al puerto 10000 y ejecutamos la app
-CMD ["gunicorn", "--bind", "0.0.0.0:10000", "run:app"]
+# 8. COMANDO DE ARRANQUE PARA DESARROLLO
+# Usamos python run.py en lugar de gunicorn para tener el Debugger activado
+CMD ["python", "run.py"]

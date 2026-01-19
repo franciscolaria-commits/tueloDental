@@ -1,56 +1,147 @@
 {% extends 'base.html' %}
+
 {% block content %}
 <div class="container py-4">
-    <h2>📦 Gestión de Órdenes</h2>
-    <table class="table table-striped mt-4">
-        <thead class="table-dark">
-            <tr>
-                <th>ID</th>
-                <th>Cliente</th>
-                <th>Fecha</th>
-                <th>Total</th>
-                <th>Estado</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for order in orders %}
-            <tr>
-                <td>#{{ order.id }}</td>
-                <td>
-                    {{ order.customer_name }}<br>
-                    <small class="text-muted">{{ order.customer_email }}</small>
-                </td>
-                <td>{{ order.date_created.strftime('%d/%m %H:%M') }}</td>
-                <td>${{ order.total_price }}</td>
-                <td>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-sm btn-outline-dark dropdown-toggle"
-                            data-bs-toggle="dropdown">
-                            {% if order.status == 'pending' %} 🟡 Pendiente
-                            {% elif order.status == 'paid' %} 🟢 Pagado
-                            {% elif order.status == 'shipped' %} 🚚 Enviado
-                            {% elif order.status == 'cancelled' %} 🔴 Cancelado
-                            {% else %} {{ order.status }} {% endif %}
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item"
-                                    href="{{ url_for('admin.update_order_status', order_id=order.id, new_status='paid') }}">Marcar
-                                    como Pagado</a></li>
-                            <li><a class="dropdown-item"
-                                    href="{{ url_for('admin.update_order_status', order_id=order.id, new_status='shipped') }}">Marcar
-                                    como Enviado</a></li>
-                            <li>
-                                <hr class="dropdown-divider">
-                            </li>
-                            <li><a class="dropdown-item text-danger"
-                                    href="{{ url_for('admin.update_order_status', order_id=order.id, new_status='cancelled') }}">Cancelar
-                                    Orden</a></li>
-                        </ul>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <h2 class="mb-4">📦 Gestión de Órdenes</h2>
+
+    <ul class="nav nav-tabs mb-4" id="orderTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-bold" id="active-tab" data-bs-toggle="tab" data-bs-target="#active"
+                type="button" role="tab">
+                🚨 A Preparar / Pendientes
+                {% if active_orders|length > 0 %}
+                <span class="badge bg-danger ms-2">{{ active_orders|length }}</span>
+                {% endif %}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link text-secondary" id="history-tab" data-bs-toggle="tab" data-bs-target="#history"
+                type="button" role="tab">
+                📂 Historial de Enviados
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="orderTabsContent">
+
+        <div class="tab-pane fade show active" id="active" role="tabpanel">
+            {% if active_orders %}
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#ID</th>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>Productos</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in active_orders %}
+                            <tr>
+                                <td><strong>{{ order.id }}</strong></td>
+                                <td>{{ order.date_created.strftime('%d/%m %H:%M') }}</td>
+                                <td>
+                                    <div>{{ order.user.username }}</div>
+                                    <small class="text-muted">{{ order.user.email }}</small>
+                                </td>
+                                <td>
+                                    <ul class="list-unstyled mb-0 small">
+                                        {% for item in order.items %}
+                                        <li>{{ item.quantity }}x {{ item.product.name }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </td>
+                                <td class="fw-bold">${{ order.total_price }}</td>
+                                <td>
+                                    {% if order.status == 'paid' %}
+                                    <span class="badge bg-success">PAGADO</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark">PENDIENTE DE PAGO</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if order.status == 'paid' %}
+                                    <a href="{{ url_for('admin.update_order_status', order_id=order.id, new_status='shipped') }}"
+                                        class="btn btn-sm btn-primary"
+                                        onclick="return confirm('¿Ya preparaste el paquete? Esto moverá la orden al historial.')">
+                                        <i class="bi bi-box-seam"></i> Marcar Enviado
+                                    </a>
+                                    {% else %}
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('admin.update_order_status', order_id=order.id, new_status='paid') }}"
+                                            class="btn btn-sm btn-outline-success" title="Marcar Pagado Manualmente"><i
+                                                class="bi bi-cash"></i></a>
+                                        <a href="{{ url_for('admin.update_order_status', order_id=order.id, new_status='cancelled') }}"
+                                            class="btn btn-sm btn-outline-danger" title="Cancelar"><i
+                                                class="bi bi-x-lg"></i></a>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info text-center">
+                <h5>¡Todo limpio! 🎉</h5>
+                <p>No hay órdenes pendientes de preparación.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="tab-pane fade" id="history" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <p class="text-muted mb-0">Estas órdenes ya fueron procesadas y entregadas.</p>
+
+                {% if history_orders %}
+                <a href="{{ url_for('admin.export_and_clean_history') }}" class="btn btn-success shadow-sm"
+                    onclick="return confirm('⚠️ ATENCIÓN: Esto descargará un Excel con todas las ventas terminadas y las BORRARÁ de la base de datos para limpiar el sistema.\n\n¿Estás seguro?')">
+                    <i class="bi bi-file-earmark-spreadsheet"></i> Descargar Excel y Limpiar DB
+                </a>
+                {% endif %}
+            </div>
+
+            {% if history_orders %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <table class="table table-striped table-sm text-muted mb-0">
+                        <thead>
+                            <tr>
+                                <th>#ID</th>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in history_orders %}
+                            <tr>
+                                <td>{{ order.id }}</td>
+                                <td>{{ order.date_created.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ order.user.email }}</td>
+                                <td>${{ order.total_price }}</td>
+                                <td><span class="badge bg-secondary">Archivado</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-archive fs-1"></i>
+                <p>No hay historial todavía.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
 {% endblock %}
