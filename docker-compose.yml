@@ -10,17 +10,17 @@ services:
       - .:/app
     environment:
       - FLASK_APP=run.py
-      - FLASK_DEBUG=1
+      - FLASK_DEBUG=${FLASK_DEBUG}
       - MYSQL_HOST=db
-      - MYSQL_USER=ecommerce_user
-      - MYSQL_PASSWORD=secret_password
-      - MYSQL_DB=ecommerce_db
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DB=${MYSQL_DB}
 
-      # --- AGREGÁ ESTO PARA QUE NO EXPLOTE ---
-      - MP_ACCESS_TOKEN=APP_USR-1406867289039041-011308-01d185d294d784192a9ad6af84807a51-3130462005
-      - MP_PUBLIC_KEY=APP_USR-6b1bb09e-fd95-44eb-bd86-43d0a5795a96
-      - BASE_URL=http://localhost:5000
-      # ---------------------------------------
+      # --- SEGURIDAD: Ahora lee del archivo .env ---
+      - MP_ACCESS_TOKEN=${MP_ACCESS_TOKEN}
+      - MP_PUBLIC_KEY=${MP_PUBLIC_KEY}
+      - BASE_URL=${BASE_URL}
+      # ---------------------------------------------
 
     depends_on:
       - db
@@ -30,10 +30,10 @@ services:
     container_name: dental_db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root_secret
-      MYSQL_DATABASE: ecommerce_db
-      MYSQL_USER: ecommerce_user
-      MYSQL_PASSWORD: secret_password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3307:3306"
     volumes:
