@@ -1,19 +1,20 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-5">
-    <h2 class="mb-4">🛒 Tu Carrito</h2>
+<div class="container mt-4 mb-5">
+    <h2 class="mb-4 fw-bold text-primary"><i class="bi bi-cart3"></i> Mi Pedido</h2>
 
     {% if products %}
     <div class="row">
         <div class="col-lg-8">
-            <div class="card shadow-sm border-0">
+
+            <div class="card shadow-sm border-0 d-none d-md-block mb-4">
                 <div class="card-body p-0">
                     <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                        <thead class="bg-light text-secondary small text-uppercase">
                             <tr>
-                                <th style="width: 100px;">Producto</th>
-                                <th>Descripción</th>
+                                <th style="width: 100px;">Insumo</th>
+                                <th>Detalle</th>
                                 <th>Precio Unit.</th>
                                 <th class="text-center">Cantidad</th>
                                 <th>Subtotal</th>
@@ -24,44 +25,37 @@
                             {% for product in products %}
                             <tr>
                                 <td class="p-3">
-                                    <img src="{{ product.image_url }}" alt="{{ product.name }}"
-                                        class="img-fluid rounded" style="width: 60px; height: 60px; object-fit: cover;">
+                                    <div class="bg-light rounded p-1 border">
+                                        <img src="{{ product.image_url }}" alt="{{ product.name }}" class="img-fluid"
+                                            style="width: 60px; height: 60px; object-fit: contain;">
+                                    </div>
                                 </td>
-
                                 <td>
-                                    <h6 class="mb-0 fw-bold">{{ product.name }}</h6>
-                                    <small class="text-muted">Stock disponible: {{ product.stock }}</small>
+                                    <h6 class="mb-0 fw-bold text-dark">{{ product.name }}</h6>
+                                    <span class="badge bg-light text-secondary border">{{ product.category }}</span>
                                 </td>
-
-                                <td>${{ product.price }}</td>
-
+                                <td class="text-muted fw-bold">${{ product.price }}</td>
                                 <td class="text-center">
-                                    <div class="input-group input-group-sm mx-auto" style="width: 110px;">
+                                    <div class="input-group input-group-sm mx-auto" style="width: 120px;">
                                         <a href="{{ url_for('shop.update_quantity', product_id=product.id, action='decrease') }}"
                                             class="btn btn-outline-secondary {{ 'disabled' if quantities[product.id|string] == 1 else '' }}">
                                             <i class="bi bi-dash"></i>
                                         </a>
-
-                                        <span
-                                            class="form-control text-center bg-white border-secondary border-start-0 border-end-0">
+                                        <span class="form-control text-center bg-white">
                                             {{ quantities[product.id|string] }}
                                         </span>
-
                                         <a href="{{ url_for('shop.update_quantity', product_id=product.id, action='increase') }}"
-                                            class="btn btn-outline-secondary">
+                                            class="btn btn-outline-primary">
                                             <i class="bi bi-plus"></i>
                                         </a>
                                     </div>
                                 </td>
-
-                                <td class="fw-bold text-primary">
-                                    ${{ product.price * quantities[product.id|string] }}
+                                <td class="fw-bold text-primary">${{ product.price * quantities[product.id|string] }}
                                 </td>
-
-                                <td class="text-end pe-3">
+                                <td class="text-end pe-4">
                                     <a href="{{ url_for('shop.remove_from_cart', product_id=product.id) }}"
-                                        class="btn btn-sm btn-outline-danger" title="Eliminar del carrito">
-                                        <i class="bi bi-trash"></i>
+                                        class="text-danger opacity-50 hover-opacity-100" title="Quitar">
+                                        <i class="bi bi-trash fs-5"></i>
                                     </a>
                                 </td>
                             </tr>
@@ -70,47 +64,113 @@
                     </table>
                 </div>
             </div>
+
+            <div class="d-md-none">
+                {% for product in products %}
+                <div class="card mb-3 border-0 shadow-sm">
+                    <div class="row g-0">
+                        <div class="col-4 bg-light d-flex align-items-center justify-content-center border-end">
+                            <img src="{{ product.image_url }}" class="img-fluid p-2"
+                                style="max-height: 100px; object-fit: contain;" alt="...">
+                        </div>
+
+                        <div class="col-8">
+                            <div class="card-body py-2 pe-2 ps-3">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <div>
+                                        <h6 class="card-title mb-0 fw-bold text-dark" style="font-size: 0.9rem;">{{
+                                            product.name }}</h6>
+                                        <small class="text-muted" style="font-size: 0.75rem;">Unitario: ${{
+                                            product.price }}</small>
+                                    </div>
+                                    <a href="{{ url_for('shop.remove_from_cart', product_id=product.id) }}"
+                                        class="text-danger ps-2">
+                                        <i class="bi bi-x-circle fs-5"></i>
+                                    </a>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-end mt-2">
+                                    <div class="input-group input-group-sm shadow-sm" style="width: 100px;">
+                                        <a href="{{ url_for('shop.update_quantity', product_id=product.id, action='decrease') }}"
+                                            class="btn btn-outline-secondary {{ 'disabled' if quantities[product.id|string] == 1 else '' }}">-</a>
+                                        <span
+                                            class="input-group-text bg-white border-secondary border-start-0 border-end-0 fw-bold px-2">
+                                            {{ quantities[product.id|string] }}
+                                        </span>
+                                        <a href="{{ url_for('shop.update_quantity', product_id=product.id, action='increase') }}"
+                                            class="btn btn-primary">+</a>
+                                    </div>
+
+                                    <span class="fw-bold text-primary fs-6">${{ product.price *
+                                        quantities[product.id|string] }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
         </div>
 
-        <div class="col-lg-4 mt-4 mt-lg-0">
-            <div class="card shadow-sm border-0 bg-light">
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 bg-white">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0 fw-bold text-primary">Resumen</h5>
+                </div>
                 <div class="card-body p-4">
-                    <h4 class="card-title mb-4">Resumen</h4>
-                    <div class="d-flex justify-content-between mb-3">
-                        <span>Subtotal</span>
-                        <span class="fw-bold">${{ total }}</span>
+                    <div class="d-flex justify-content-between mb-3 text-muted">
+                        <span>Subtotal Productos</span>
+                        <span>${{ total }}</span>
                     </div>
-                    <hr>
+                    <div class="d-flex justify-content-between mb-3 text-success">
+                        <span><i class="bi bi-truck"></i> Envío</span>
+                        <span class="fw-bold">A coordinar</span>
+                    </div>
+                    <hr class="my-3">
                     <div class="d-flex justify-content-between mb-4">
-                        <span class="fs-4 fw-bold">Total</span>
+                        <span class="fs-5 fw-bold text-dark">Total Estimado</span>
                         <span class="fs-4 fw-bold text-primary">${{ total }}</span>
                     </div>
 
                     <div class="d-grid gap-2">
                         {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('shop.checkout') }}" class="btn btn-primary btn-lg shadow">
-                            Iniciar Pago <i class="bi bi-credit-card ms-2"></i>
+                        <a href="{{ url_for('shop.checkout') }}" class="btn btn-primary btn-lg shadow-sm">
+                            Confirmar Pedido <i class="bi bi-arrow-right-short"></i>
                         </a>
                         {% else %}
-                        <a href="{{ url_for('auth.login', next='checkout') }}" class="btn btn-warning btn-lg">
-                            Iniciá sesión para pagar
+                        <a href="{{ url_for('auth.login', next='checkout') }}" class="btn btn-outline-primary btn-lg">
+                            Ingresar para Comprar
                         </a>
                         {% endif %}
 
-                        <a href="{{ url_for('shop.index') }}" class="btn btn-outline-secondary mt-2">
-                            Seguir comprando
+                        <a href="{{ url_for('shop.index') }}"
+                            class="btn btn-link text-decoration-none text-muted mt-2 btn-sm">
+                            <i class="bi bi-arrow-left"></i> Volver al catálogo
                         </a>
                     </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info mt-3 border-0 d-flex align-items-center gap-3 small shadow-sm">
+                <i class="bi bi-shield-check fs-2"></i>
+                <div>
+                    <strong>Compra Segura</strong><br>
+                    Tus datos están protegidos.
                 </div>
             </div>
         </div>
     </div>
     {% else %}
-    <div class="text-center py-5">
-        <i class="bi bi-cart-x display-1 text-muted opacity-50"></i>
-        <h3 class="mt-3 text-muted">Tu carrito está vacío</h3>
-        <p class="mb-4">¿No sabés qué comprar? ¡Mirá nuestras ofertas!</p>
-        <a href="{{ url_for('shop.index') }}" class="btn btn-primary btn-lg">Ir al Catálogo</a>
+    <div class="text-center py-5 bg-white rounded-3 shadow-sm">
+        <div class="mb-3">
+            <span class="bg-light rounded-circle p-4 d-inline-block">
+                <i class="bi bi-cart-x display-1 text-muted opacity-25"></i>
+            </span>
+        </div>
+        <h3 class="mt-3 text-muted fw-bold">El carrito está vacío</h3>
+        <p class="text-muted mb-4">Explorá nuestro catálogo de insumos profesionales.</p>
+        <a href="{{ url_for('shop.index') }}" class="btn btn-primary px-5 py-2 shadow-sm">Ver Productos</a>
     </div>
     {% endif %}
 </div>
