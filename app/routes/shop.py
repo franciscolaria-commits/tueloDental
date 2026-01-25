@@ -24,23 +24,27 @@ def landing():
 
 @shop_bp.route('/catalogo')
 def index():
-    # 1. Obtener todas las categorías únicas para el menú lateral
-    # Esto devuelve una lista de tuplas [('General',), ('Insumos',)]
+    # 1. Recuperar Categorías
     categories_query = db.session.query(Product.category).distinct().all()
-    # Las limpiamos para que sea una lista simple ['General', 'Insumos']
     categories = [c[0] for c in categories_query if c[0]]
 
-    # 2. Verificamos si el usuario hizo clic en una categoría
+    # 2. Preparar la consulta base (Query)
+    query = Product.query
+
+    # 3. FILTRO 1: Por Categoría (si seleccionó una)
     category_filter = request.args.get('category')
-
     if category_filter:
-        # FILTRAR: Solo mostramos los de esa categoría
-        products = Product.query.filter_by(category=category_filter).all()
-    else:
-        # MOSTRAR TODO
-        products = Product.query.all()
+        query = query.filter_by(category=category_filter)
 
-    # 3. Enviamos todo al HTML: productos, la lista de categorías y cuál está seleccionada
+    # 4. FILTRO 2: Por Búsqueda (NUEVO)
+    search_query = request.args.get('q')
+    if search_query:
+        # Usamos ilike para que no importen mayúsculas/minúsculas
+        query = query.filter(Product.name.ilike(f'%{search_query}%'))
+
+    # 5. Ejecutar la consulta final
+    products = query.all()
+
     return render_template(
         'shop/index.html', 
         products=products, 
