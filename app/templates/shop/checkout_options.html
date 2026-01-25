@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow border-0">
+                <div class="card-header bg-white py-3 text-center">
+                    <h4 class="fw-bold text-primary mb-0">Confirmar Pedido</h4>
+                    <p class="text-muted mb-0">Total a abonar: <span class="fw-bold fs-5">${{ total }}</span></p>
+                </div>
+                <div class="card-body p-4">
+                    <form action="{{ url_for('shop.checkout') }}" method="POST">
+                        <p class="text-center mb-4 fw-bold text-secondary">Seleccioná tu método de pago:</p>
+
+                        <div class="form-check p-3 mb-3 border rounded shadow-sm bg-light">
+                            <input class="form-check-input mt-2" type="radio" name="payment_method" id="pay_mp"
+                                value="mp" checked>
+                            <label class="form-check-label w-100 ps-2" for="pay_mp" style="cursor: pointer;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong class="d-block text-primary">MercadoPago</strong>
+                                        <small class="text-muted">Tarjetas, Débito, Dinero en cuenta.</small>
+                                    </div>
+                                    <i class="bi bi-credit-card-2-front fs-2 text-primary"></i>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="form-check p-3 mb-4 border rounded shadow-sm bg-light">
+                            <input class="form-check-input mt-2" type="radio" name="payment_method" id="pay_local"
+                                value="local">
+                            <label class="form-check-label w-100 ps-2" for="pay_local" style="cursor: pointer;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong class="d-block text-success">Pagar en el Local</strong>
+                                        <small class="text-muted">Efectivo o Transferencia al retirar.</small>
+                                    </div>
+                                    <i class="bi bi-shop fs-2 text-success"></i>
+                                </div>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 btn-lg fw-bold shadow-sm">
+                            Continuar <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5 text-center">
+
+    <div class="mb-5">
+        <div
+            class="d-inline-block p-4 rounded-circle bg-success bg-opacity-10 mb-3 animate__animated animate__bounceIn">
+            <i class="bi bi-check-lg display-1 text-success"></i>
+        </div>
+        <h2 class="fw-bold">¡Pedido #{{ order.id }} Confirmado!</h2>
+        {% if order.status == 'paid' %}
+        <span class="badge bg-success fs-6 px-3 py-2">Pago Aprobado</span>
+        {% else %}
+        <span class="badge bg-warning text-dark fs-6 px-3 py-2">Pago Pendiente en Local</span>
+        {% endif %}
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-truck"></i> ¿Cómo querés recibir tu pedido?</h5>
+                </div>
+                <div class="card-body p-4">
+
+                    <ul class="nav nav-pills nav-fill mb-4" id="pills-tab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold" id="pills-retiro-tab" data-bs-toggle="pill"
+                                data-bs-target="#pills-retiro" type="button">
+                                <i class="bi bi-shop"></i> Retiro por Local
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold" id="pills-envio-tab" data-bs-toggle="pill"
+                                data-bs-target="#pills-envio" type="button">
+                                <i class="bi bi-box-seam"></i> Envío a Domicilio
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="pills-tabContent">
+
+                        <div class="tab-pane fade show active" id="pills-retiro">
+                            <div class="alert alert-light border text-start">
+                                <h6 class="fw-bold text-dark"><i class="bi bi-geo-alt-fill text-danger"></i> Tuelo
+                                    Dental</h6>
+                                <p class="mb-1">Calle Falsa 123, San Juan</p>
+                                <p class="mb-0 text-muted small">Horario: Lun a Vie 9 a 18hs</p>
+                            </div>
+                            <a href="https://wa.me/549264XXXXXXX?text=Hola,%20soy%20{{ current_user.username }}.%20Paso%20a%20retirar%20mi%20orden%20Nro%20{{ order.id }}"
+                                class="btn btn-success w-100 fw-bold" target="_blank">
+                                <i class="bi bi-whatsapp"></i> Avisar que paso a buscarlo
+                            </a>
+                        </div>
+
+                        <div class="tab-pane fade" id="pills-envio">
+                            <p class="small text-muted mb-3">Escribí tu dirección exacta y envianosla por WhatsApp para
+                                coordinar el delivery.</p>
+
+                            <div class="form-floating mb-3">
+                                <input type="text" id="direccionInput" class="form-control" placeholder="Dirección">
+                                <label for="direccionInput">Dirección (Calle, Altura, Barrio)</label>
+                            </div>
+
+                            <button onclick="enviarDireccion()"
+                                class="btn btn-success w-100 text-white fw-bold shadow-sm">
+                                <i class="bi bi-whatsapp"></i> Enviar Dirección
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <a href="{{ url_for('shop.index') }}" class="btn btn-link text-muted text-decoration-none">Volver al
+                    inicio</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function enviarDireccion() {
+        var direccion = document.getElementById('direccionInput').value;
+        var ordenId = "{{ order.id }}";
+        var nombre = "{{ current_user.username }}";
+
+        if (direccion.trim() === "") {
+            alert("Por favor escribí una dirección para enviarte el pedido.");
+            return;
+        }
+
+        // Armamos el mensaje automático
+        var texto = "Hola Tuelo Dental! Soy " + nombre + ". ";
+        texto += "Ya hice la Orden #" + ordenId + ". ";
+        texto += "Necesito envío a domicilio a: " + direccion;
+
+        // TU NÚMERO ACÁ (Formato internacional sin +)
+        var telefono = "5492645 51-0866";
+
+        var url = "https://wa.me/" + telefono + "?text=" + encodeURIComponent(texto);
+
+        window.open(url, '_blank');
+    }
+</script>
+{% endblock %}
