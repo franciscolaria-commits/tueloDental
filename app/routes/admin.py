@@ -1,13 +1,12 @@
-import io
-from datetime import datetime
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, current_app
+from flask_login import login_required, current_user
 from functools import wraps
 import pandas as pd
-from werkzeug.utils import secure_filename
-
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, send_file
-from flask_login import login_required, current_user
-from app.models import Product, Order
+import io # Para manejar el archivo en memoria
+from app.models import Product, Order, OrderItem
 from app import db
+from datetime import datetime
+from flask import send_file
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -26,7 +25,7 @@ def admin_required(f):
 @admin_bp.route('/')
 @admin_required
 def dashboard():
-    products = Product.query.all()
+    products = Product.query.order_by(Product.id.desc()).all()
     return render_template('admin/dashboard.html', products=products)
 
 @admin_bp.route('/product/new', methods=['GET', 'POST'])
@@ -38,8 +37,16 @@ def create_product():
         stock = int(request.form.get('stock'))
         description = request.form.get('description')
         image_url = request.form.get('image_url')
+        category = request.form.get('category') # <--- AGREGADO: Capturar categoría
         
-        product = Product(name=name, price=price, stock=stock, description=description, image_url=image_url)
+        product = Product(
+            name=name, 
+            price=price, 
+            stock=stock, 
+            description=description, 
+            image_url=image_url,
+            category=category # <--- AGREGADO: Guardar categoría
+        )
         db.session.add(product)
         db.session.commit()
         flash('Producto creado exitosamente.', 'success')
@@ -58,6 +65,7 @@ def edit_product(id):
         product.stock = int(request.form.get('stock'))
         product.description = request.form.get('description')
         product.image_url = request.form.get('image_url')
+        product.category = request.form.get('category') # <--- AGREGADO: Actualizar categoría
         
         db.session.commit()
         flash('Producto actualizado.', 'success')
@@ -69,6 +77,8 @@ def edit_product(id):
 @admin_required
 def delete_product(id):
     product = Product.query.get_or_404(id)
+    # Primero verificamos si tiene items de ordenes asociados para no romper la DB
+    # (Aunque nuestro script de limpieza ya se encargó, esto es seguridad extra)
     db.session.delete(product)
     db.session.commit()
     flash('Producto eliminado.', 'info')
@@ -97,41 +107,33 @@ def import_products():
         else:
             df = pd.read_csv(file)
         
-        # Limpiamos espacios en los nombres de las columnas por si acaso " Nombre "
+        # Limpiamos espacios en los nombres de las columnas
         df.columns = [c.strip() for c in df.columns]
 
         count_new = 0
         count_updated = 0
         
         for index, row in df.iterrows():
-            # --- LECTURA FLEXIBLE (Mayúscula o Minúscula) ---
-            
-            # 1. NOMBRE (Nombre o nombre)
+            # Lectura Flexible
             raw_name = row.get('Nombre', row.get('nombre'))
             if not raw_name or pd.isna(raw_name):
-                continue # Si no tiene nombre, saltamos esta fila
+                continue 
             name = str(raw_name).strip()
 
-            # 2. PRECIO (Precio o precio)
             raw_price = row.get('Precio', row.get('precio'))
             price = float(raw_price) if raw_price and pd.notna(raw_price) else 0.0
 
-            # 3. STOCK (Stock o stock)
             raw_stock = row.get('Stock', row.get('stock'))
             stock = int(raw_stock) if raw_stock and pd.notna(raw_stock) else 0
 
-            # 4. DESCRIPCIÓN (Descripcion, descripcion o Descripción)
             raw_desc = row.get('Descripcion', row.get('descripcion', row.get('Descripción')))
             description = str(raw_desc) if raw_desc and pd.notna(raw_desc) else ''
             
-            # 5. CATEGORÍA (Categoria, categoria o Categoría)
             raw_cat = row.get('Categoria', row.get('categoria', row.get('Categoría')))
             if raw_cat and pd.notna(raw_cat):
                 category = str(raw_cat).strip()
             else:
-                category = "General"
-
-            # ------------------------------------------------
+                category = "Odontología General" # Default si no ponen nada
 
             product = Product.query.filter_by(name=name).first()
             
@@ -163,17 +165,15 @@ def import_products():
         print(f"Error importando: {e}")
 
     return redirect(url_for('admin.dashboard'))
-    
-# --- RUTAS DE GESTIÓN DE ÓRDENES (Lógica Nueva) ---
+
+# --- RUTAS DE GESTIÓN DE ÓRDENES ---
 
 @admin_bp.route('/orders')
 @admin_required
 def orders():
-    # 1. Órdenes Activas: Pendientes o Pagadas (Las que requieren acción)
     active_orders = Order.query.filter(Order.status.in_(['pending', 'paid']))\
                                .order_by(Order.date_created.desc()).all()
     
-    # 2. Historial: Solo las Enviadas/Entregadas
     history_orders = Order.query.filter_by(status='shipped')\
                                 .order_by(Order.date_created.desc()).all()
     
@@ -183,21 +183,19 @@ def orders():
 @admin_required
 def update_order_status(order_id, new_status):
     order = Order.query.get_or_404(order_id)
-    
     allowed_statuses = ['paid', 'shipped', 'cancelled']
     
     if new_status not in allowed_statuses:
         flash('Estado no válido.', 'danger')
         return redirect(url_for('admin.orders'))
     
-    # Si cancelamos la orden, devolvemos el stock
+    # Devolver stock si se cancela
     if new_status == 'cancelled' and order.status != 'cancelled':
         for item in order.items:
-            if item.product: # Verificamos que el producto aún exista en DB
+            if item.product:
                 item.product.stock += item.quantity
         flash('Orden cancelada y stock restaurado.', 'info')
     
-    # Mensaje de éxito si se envía al historial
     if new_status == 'shipped':
         flash(f'¡Orden #{order.id} archivada en el Historial!', 'success')
     else:
@@ -211,17 +209,14 @@ def update_order_status(order_id, new_status):
 @admin_bp.route('/orders/export_clean')
 @admin_required
 def export_and_clean_history():
-    # 1. Buscamos SOLO las órdenes del historial (ya enviadas)
     orders_to_export = Order.query.filter_by(status='shipped').all()
     
     if not orders_to_export:
         flash('No hay órdenes terminadas para exportar.', 'warning')
         return redirect(url_for('admin.orders'))
 
-    # 2. Convertimos los datos a formato Pandas (Excel)
     data = []
     for order in orders_to_export:
-        # Aplanamos los items
         items_str = ", ".join([f"{i.quantity}x {i.product.name if i.product else 'Eliminado'}" for i in order.items])
         
         data.append({
@@ -235,29 +230,21 @@ def export_and_clean_history():
         })
     
     df = pd.DataFrame(data)
-
-    # 3. Guardamos en Memoria
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Ventas Terminadas')
     output.seek(0)
 
-    # 4. LIMPIEZA DE BASE DE DATOS
     try:
         for order in orders_to_export:
-            # Primero borramos los items de la orden
             for item in order.items:
                 db.session.delete(item)
-            # Después borramos la orden
             db.session.delete(order)
         db.session.commit()
-        print("🧹 Historial limpiado exitosamente.")
     except Exception as e:
         db.session.rollback()
-        flash(f'Error al limpiar base de datos: {str(e)}', 'danger')
+        flash(f'Error al limpiar: {str(e)}', 'danger')
         return redirect(url_for('admin.orders'))
 
-    # 5. Descargar archivo
     filename = f"Ventas_Terminadas_{datetime.now().strftime('%Y_%m_%d')}.xlsx"
     return send_file(output, download_name=filename, as_attachment=True, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-

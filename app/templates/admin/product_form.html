@@ -3,45 +3,70 @@
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-dark text-white">
-                    <h4>{{ action }} Producto</h4>
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white text-center py-3">
+                    <h4 class="mb-0 fw-bold">{{ action }} Producto</h4>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
                     <form method="POST">
+
                         <div class="mb-3">
-                            <label>Nombre del Producto</label>
-                            <input type="text" name="name" class="form-control"
-                                value="{{ product.name if product else '' }}" required>
+                            <label class="form-label fw-bold">Nombre del Insumo</label>
+                            <input type="text" class="form-control" name="name"
+                                value="{{ product.name if product else '' }}" required autofocus>
                         </div>
+
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label>Precio ($)</label>
-                                <input type="number" step="0.01" name="price" class="form-control"
+                                <label class="form-label fw-bold">Precio ($)</label>
+                                <input type="number" step="0.01" class="form-control" name="price"
                                     value="{{ product.price if product else '' }}" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label>Stock Inicial</label>
-                                <input type="number" name="stock" class="form-control"
+                                <label class="form-label fw-bold">Stock Inicial</label>
+                                <input type="number" class="form-control" name="stock"
                                     value="{{ product.stock if product else '' }}" required>
                             </div>
                         </div>
+
                         <div class="mb-3">
-                            <label>URL de la Imagen</label>
-                            <input type="text" name="image_url" class="form-control"
-                                value="{{ product.image_url if product else '' }}" placeholder="http://...">
-                            <small class="text-muted">Por ahora pegá una URL de Google Images.</small>
+                            <label class="form-label fw-bold">Categoría</label>
+                            <select class="form-select" name="category" required>
+                                <option value="" disabled {{ 'selected' if not product else '' }}>Seleccioná una
+                                    categoría...</option>
+
+                                <option value="Equipamiento" {{ 'selected' if product and
+                                    product.category=='Equipamiento' else '' }}>Equipamiento</option>
+                                <option value="Implantes" {{ 'selected' if product and product.category=='Implantes'
+                                    else '' }}>Implantes</option>
+                                <option value="Laboratorio" {{ 'selected' if product and product.category=='Laboratorio'
+                                    else '' }}>Laboratorio</option>
+                                <option value="Odontología General" {{ 'selected' if product and
+                                    product.category=='Odontología General' else '' }}>Odontología General</option>
+                                <option value="Ortodoncia" {{ 'selected' if product and product.category=='Ortodoncia'
+                                    else '' }}>Ortodoncia</option>
+                                <option value="Prótesis" {{ 'selected' if product and product.category=='Prótesis'
+                                    else '' }}>Prótesis</option>
+                            </select>
                         </div>
+
                         <div class="mb-3">
-                            <label>Descripción</label>
-                            <textarea name="description" class="form-control"
+                            <label class="form-label fw-bold">URL de la Imagen</label>
+                            <input type="url" class="form-control" name="image_url" placeholder="https://..."
+                                value="{{ product.image_url if product else '' }}">
+                            <div class="form-text">Podés copiar el link de la imagen de Google o del proveedor.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Descripción</label>
+                            <textarea class="form-control" name="description"
                                 rows="3">{{ product.description if product else '' }}</textarea>
                         </div>
 
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg">Guardar</button>
-                            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-primary btn-lg shadow-sm">Guardar Producto</button>
+                            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">Cancelar</a>
                         </div>
                     </form>
                 </div>
