@@ -84,8 +84,13 @@
 <script>
     function enviarDireccion() {
         var direccion = document.getElementById('direccionInput').value;
+
+        // CORRECCIÓN AQUÍ: Usamos order.id y order.user.username
+        // Esto funciona incluso si la cookie de sesión se perdió en el camino.
         var ordenId = "{{ order.id }}";
-        var nombre = "{{ current_user.username }}";
+
+        // Usamos el nombre guardado en la orden, no el de la sesión actual
+        var nombre = "{{ order.user.username }}";
 
         if (direccion.trim() === "") {
             alert("Por favor escribí una dirección para enviarte el pedido.");
@@ -97,8 +102,8 @@
         texto += "Ya hice la Orden #" + ordenId + ". ";
         texto += "Necesito envío a domicilio a: " + direccion;
 
-        // TU NÚMERO ACÁ (Formato internacional sin +)
-        var telefono = "5492645 51-0866";
+        // TU NÚMERO DE TELÉFONO
+        var telefono = "549264XXXXXXX";
 
         var url = "https://wa.me/" + telefono + "?text=" + encodeURIComponent(texto);
 
