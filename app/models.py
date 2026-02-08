@@ -27,9 +27,6 @@ class Product(db.Model):
     price = db.Column(db.Float, nullable=False)
     stock = db.Column(db.Integer, default=0)
     image_url = db.Column(db.String(500))
-    
-    # --- NUEVA COLUMNA CATEGORÍA ---
-    # Guardará cosas como "Descartables", "Instrumental", "Equipamiento"
     category = db.Column(db.String(50), default="General") 
 
 class Order(db.Model):
