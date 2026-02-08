@@ -83,12 +83,10 @@
                         </div>
 
                         <div class="card-body d-flex flex-column">
-                            <h5 class="card-title fs-6 fw-bold mb-1">
-                                <a href="{{ url_for('shop.product_detail', product_id=product.id) }}"
-                                    class="text-dark text-decoration-none stretched-link">
-                                    {{ product.name }}
-                                </a>
+                            <h5 class="card-title fs-6 fw-bold mb-1 text-dark">
+                                {{ product.name }}
                             </h5>
+
                             <p class="card-text text-muted small mb-3 flex-grow-1" style="font-size: 0.85rem;">
                                 {{ product.description[:60] }}...
                             </p>
