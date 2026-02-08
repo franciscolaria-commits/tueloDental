@@ -44,10 +44,10 @@ def index():
         current_category=category_filter
     )
 
-@shop_bp.route('/product/<int:product_id>')
-def product_detail(product_id):
-    product = Product.query.get_or_404(product_id)
-    return render_template('shop/detail.html', product=product)
+# @shop_bp.route('/product/<int:product_id>')
+# def product_detail(product_id):
+#     product = Product.query.get_or_404(product_id)
+#     return render_template('shop/detail.html', product=product)
 
 # --- CARRITO DE COMPRAS ---
 
