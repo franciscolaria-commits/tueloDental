@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container mt-5 mb-5">
+    <a href="{{ url_for('shop.catalogo') }}" class="btn btn-outline-secondary mb-4">
+        &larr; Volver al Catálogo
+    </a>
+
+    <div class="row">
+        <div class="col-md-6 text-center">
+            {% if product.image_url %}
+            <img src="{{ product.image_url }}" alt="{{ product.name }}" class="img-fluid rounded shadow-sm"
+                style="max-height: 500px; object-fit: contain;">
+            {% else %}
+            <img src="https://via.placeholder.com/500x500?text=Sin+Imagen" class="img-fluid rounded shadow-sm"
+                alt="Sin imagen">
+            {% endif %}
+        </div>
+
+        <div class="col-md-6">
+            <span class="badge bg-primary mb-2">{{ product.category }}</span>
+            <h1 class="display-5">{{ product.name }}</h1>
+
+            <h2 class="text-success fw-bold my-3">
+                ${{ "{:,.0f}".format(product.price).replace(',', '.') }}
+            </h2>
+
+            <p class="lead">{{ product.description }}</p>
+
+            <hr>
+
+            <div class="mb-4">
+                {% if product.stock > 0 %}
+                <p class="text-success"><i class="bi bi-check-circle-fill"></i> Stock Disponible: {{ product.stock }}
+                </p>
+
+                <form action="{{ url_for('cart.add_to_cart', product_id=product.id) }}" method="POST"
+                    class="d-flex gap-2">
+                    <input type="number" name="quantity" class="form-control" value="1" min="1"
+                        max="{{ product.stock }}" style="width: 80px;">
+                    <button type="submit" class="btn btn-primary w-100">
+                        Agregar al Carrito <i class="bi bi-cart-plus"></i>
+                    </button>
+                </form>
+
+                {% else %}
+                <p class="text-danger fw-bold"><i class="bi bi-x-circle-fill"></i> Sin Stock</p>
+                <button class="btn btn-secondary w-100" disabled>No disponible</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
