@@ -72,47 +72,54 @@
             <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
                 {% for product in products %}
                 <div class="col">
-                    <div class="card h-100 shadow-sm border-0 product-card bg-white">
-                        <div class="position-absolute top-0 end-0 m-2">
-                            <span class="badge bg-white text-secondary border shadow-sm">{{ product.category }}</span>
-                        </div>
+                    <a href="{{ url_for('shop.product_detail', product_id=product.id) }}" class="text-decoration-none"
+                        style="color: inherit;">
+                        <div class="card h-100 shadow-sm border-0 product-card bg-white">
+                            <div class="position-absolute top-0 end-0 m-2">
+                                <span class="badge bg-white text-secondary border shadow-sm">{{ product.category
+                                    }}</span>
+                            </div>
 
-                        <div class="text-center p-3 border-bottom bg-light bg-opacity-25" style="height: 220px;">
-                            <img src="{{ product.image_url }}" alt="{{ product.name }}" class="h-100 w-100"
-                                style="object-fit: contain;">
-                        </div>
+                            <div class="text-center p-3 border-bottom bg-light bg-opacity-25" style="height: 220px;">
+                                <img src="{{ product.image_url }}" alt="{{ product.name }}" class="h-100 w-100"
+                                    style="object-fit: contain;">
+                            </div>
 
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title fs-6 fw-bold mb-1 text-dark">
-                                {{ product.name }}
-                            </h5>
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title fs-6 fw-bold mb-1 text-dark">
+                                    {{ product.name }}
+                                </h5>
 
-                            <p class="card-text text-muted small mb-3 flex-grow-1" style="font-size: 0.85rem;">
-                                {{ product.description[:60] }}...
-                            </p>
+                                <p class="card-text text-muted small mb-3 flex-grow-1" style="font-size: 0.85rem;">
+                                    {{ product.description[:60] }}...
+                                </p>
 
-                            <div class="mt-auto">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span class="fs-5 fw-bold text-primary">${{ product.price }}</span>
+                                <div class="mt-auto">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="fs-5 fw-bold text-primary">${{ product.price }}</span>
+                                        {% if product.stock > 0 %}
+                                        <small class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i>
+                                            Stock:
+                                            {{ product.stock }}</small>
+                                        {% else %}
+                                        <small class="text-danger fw-bold">Agotado</small>
+                                        {% endif %}
+                                    </div>
+
                                     {% if product.stock > 0 %}
-                                    <small class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Stock:
-                                        {{ product.stock }}</small>
+                                    <a href="{{ url_for('shop.add_to_cart', product_id=product.id) }}"
+                                        class="btn btn-primary w-100 position-relative shadow-sm" style="z-index: 2;"
+                                        onclick="event.stopPropagation();">
+                                        Agregar al Carrito
+                                    </a>
                                     {% else %}
-                                    <small class="text-danger fw-bold">Agotado</small>
+                                    <button class="btn btn-secondary w-100 position-relative" style="z-index: 2;"
+                                        disabled>Sin Stock</button>
                                     {% endif %}
                                 </div>
-
-                                {% if product.stock > 0 %}
-                                <a href="{{ url_for('shop.add_to_cart', product_id=product.id) }}"
-                                    class="btn btn-primary w-100 position-relative shadow-sm" style="z-index: 2;">
-                                    Agregar al Carrito
-                                </a>
-                                {% else %}
-                                <button class="btn btn-secondary w-100" disabled>Sin Stock</button>
-                                {% endif %}
                             </div>
                         </div>
-                    </div>
+                    </a>
                 </div>
                 {% endfor %}
             </div>
@@ -131,6 +138,7 @@
     /* Efecto suave al pasar el mouse (menos agresivo que el de moda) */
     .product-card {
         transition: box-shadow 0.3s ease, transform 0.3s ease;
+        cursor: pointer;
     }
 
     .product-card:hover {
