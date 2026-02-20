@@ -91,6 +91,10 @@ def create_app():
 
     @app.errorhandler(Exception)
     def unhandled_exception(error):
+        # No capturar excepciones HTTP (404, 403, etc.) — ya las manejan los handlers específicos
+        from werkzeug.exceptions import HTTPException
+        if isinstance(error, HTTPException):
+            raise error
         db.session.rollback()
         traceback.print_exc()  # Log en consola para debugging
         flash('Ocurrió un error inesperado. Por favor intentá de nuevo.', 'danger')
