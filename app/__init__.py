@@ -1,5 +1,5 @@
 import os
-from flask import Flask, session
+from flask import Flask, session, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from config import Config  # <--- IMPORTANTE: Importamos tu nueva configuración
@@ -68,5 +68,32 @@ def create_app():
         # Importamos modelos para que SQLAlchemy los reconozca
         from . import models 
         db.create_all()
+
+    # PASO 7: Error Handlers Globales (Blindaje)
+    # El usuario NUNCA ve errores técnicos, siempre se redirige al landing
+    import traceback
+
+    @app.errorhandler(404)
+    def not_found_error(error):
+        flash('La página que buscás no existe.', 'warning')
+        return redirect(url_for('shop.landing'))
+
+    @app.errorhandler(403)
+    def forbidden_error(error):
+        flash('No tenés permiso para acceder a esta sección.', 'danger')
+        return redirect(url_for('shop.landing'))
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        db.session.rollback()  # Rollback por si la BD quedó en mal estado
+        flash('Ocurrió un error inesperado. Por favor intentá de nuevo.', 'danger')
+        return redirect(url_for('shop.landing'))
+
+    @app.errorhandler(Exception)
+    def unhandled_exception(error):
+        db.session.rollback()
+        traceback.print_exc()  # Log en consola para debugging
+        flash('Ocurrió un error inesperado. Por favor intentá de nuevo.', 'danger')
+        return redirect(url_for('shop.landing'))
 
     return app

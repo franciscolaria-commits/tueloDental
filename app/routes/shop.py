@@ -1,4 +1,5 @@
 import os
+import traceback
 from flask import Blueprint, render_template, redirect, url_for, flash, session, request, current_app
 from flask_login import current_user, login_required
 from app.models import Product, Order, OrderItem
@@ -126,136 +127,150 @@ def remove_from_cart(product_id):
 @shop_bp.route('/checkout', methods=['GET', 'POST'])
 @login_required
 def checkout():
-    cart = session.get('cart', {})
-    if not cart:
-        flash('El carrito está vacío', 'warning')
-        return redirect(url_for('shop.index'))
-    
-    products = Product.query.filter(Product.id.in_(cart.keys())).all()
-    
-    # Calculamos el total para mostrarlo en la pantalla de selección
-    total_price = 0
-    for product in products:
-        quantity = cart[str(product.id)]
-        if product.stock < quantity:
-            flash(f'¡Ups! No hay suficiente stock de {product.name}.', 'danger')
-            return redirect(url_for('shop.view_cart'))
-        total_price += product.price * quantity
-
-    # [NUEVO] Si entra por GET, le mostramos las opciones de pago
-    if request.method == 'GET':
-        return render_template('shop/checkout_options.html', total=total_price)
-
-    # [NUEVO] Si entra por POST, es que ya eligió
-    payment_method = request.form.get('payment_method') # 'mp' o 'local'
-
-    # CREAR ORDEN (PENDIENTE)
-    items_mp = []
-    
-    order = Order(
-        user_id=current_user.id,
-        total_price=0,
-        status='pending' 
-    )
-    db.session.add(order)
-    db.session.flush() 
-    
-    for product in products:
-        quantity = cart[str(product.id)]
+    try:
+        cart = session.get('cart', {})
+        if not cart:
+            flash('El carrito está vacío', 'warning')
+            return redirect(url_for('shop.index'))
         
-        # RESTAR STOCK (RESERVA)
-        product.stock -= quantity 
+        products = Product.query.filter(Product.id.in_(cart.keys())).all()
+        
+        # Calculamos el total para mostrarlo en la pantalla de selección
+        total_price = 0
+        for product in products:
+            quantity = cart[str(product.id)]
+            if product.stock < quantity:
+                flash(f'¡Ups! No hay suficiente stock de {product.name}.', 'danger')
+                return redirect(url_for('shop.view_cart'))
+            total_price += product.price * quantity
 
-        order_item = OrderItem(
-            order_id=order.id,
-            product_id=product.id,
-            quantity=quantity,
-            price_at_purchase=product.price
+        # [NUEVO] Si entra por GET, le mostramos las opciones de pago
+        if request.method == 'GET':
+            return render_template('shop/checkout_options.html', total=total_price)
+
+        # [NUEVO] Si entra por POST, es que ya eligió
+        payment_method = request.form.get('payment_method') # 'mp' o 'local'
+
+        # CREAR ORDEN (PENDIENTE)
+        items_mp = []
+        
+        order = Order(
+            user_id=current_user.id,
+            total_price=0,
+            status='pending' 
         )
-        db.session.add(order_item)
+        db.session.add(order)
+        db.session.flush() 
         
-        items_mp.append({
-            "title": product.name,
-            "quantity": quantity,
-            "currency_id": "ARS",
-            "unit_price": float(product.price)
-        })
-
-    order.total_price = total_price
-    db.session.commit()
-    
-    # Vaciamos carrito
-    session.pop('cart', None)
-
-    # --- DECISIÓN DE CAMINO ---
-    
-    if payment_method == 'local':
-        # CAMINO A: PAGO EN LOCAL -> Va directo al éxito (estado pendiente)
-        flash('¡Reserva exitosa! Te esperamos en el local.', 'success')
-        return redirect(url_for('shop.payment_success', order_id=order.id))
-
-    else:
-        # CAMINO B: MERCADOPAGO -> Va a la pasarela
-        sdk = get_mp_sdk()
-        if not sdk:
-            flash('Error de configuración de MP', 'danger')
-            return redirect(url_for('shop.my_orders'))
-
-        base_url = current_app.config['BASE_URL'] 
-
-        preference_data = {
-            "items": items_mp,
-            "payer": {"name": current_user.username, "email": current_user.email},
-            "back_urls": {
-                "success": f"{base_url}/payment/success",
-                "failure": f"{base_url}/payment/failure",
-                "pending": f"{base_url}/payment/pending"
-            },
-            "auto_return": "approved", 
-            "external_reference": str(order.id)
-        }
-
-        try:
-            preference_response = sdk.preference().create(preference_data)
-            preference = preference_response["response"]
+        for product in products:
+            quantity = cart[str(product.id)]
             
-            return render_template('shop/payment.html', preference_id=preference['id'], order=order)
+            # RESTAR STOCK (RESERVA)
+            product.stock -= quantity 
+
+            order_item = OrderItem(
+                order_id=order.id,
+                product_id=product.id,
+                quantity=quantity,
+                price_at_purchase=product.price
+            )
+            db.session.add(order_item)
             
-        except Exception as e:
-            flash('Error al conectar con MercadoPago', 'danger')
-            return redirect(url_for('shop.my_orders'))
+            items_mp.append({
+                "title": product.name,
+                "quantity": quantity,
+                "currency_id": "ARS",
+                "unit_price": float(product.price)
+            })
+
+        order.total_price = total_price
+        db.session.commit()
+        
+        # Vaciamos carrito
+        session.pop('cart', None)
+
+        # --- DECISIÓN DE CAMINO ---
+        
+        if payment_method == 'local':
+            # CAMINO A: PAGO EN LOCAL -> Va directo al éxito (estado pendiente)
+            flash('¡Reserva exitosa! Te esperamos en el local.', 'success')
+            return redirect(url_for('shop.payment_success', order_id=order.id))
+
+        else:
+            # CAMINO B: MERCADOPAGO -> Va a la pasarela
+            sdk = get_mp_sdk()
+            if not sdk:
+                flash('Error de configuración de MP', 'danger')
+                return redirect(url_for('shop.my_orders'))
+
+            base_url = current_app.config['BASE_URL'] 
+
+            preference_data = {
+                "items": items_mp,
+                "payer": {"name": current_user.username, "email": current_user.email},
+                "back_urls": {
+                    "success": f"{base_url}/payment/success",
+                    "failure": f"{base_url}/payment/failure",
+                    "pending": f"{base_url}/payment/pending"
+                },
+                "auto_return": "approved", 
+                "external_reference": str(order.id)
+            }
+
+            try:
+                preference_response = sdk.preference().create(preference_data)
+                preference = preference_response["response"]
+                
+                return render_template('shop/payment.html', preference_id=preference['id'], order=order)
+                
+            except Exception as e:
+                flash('Error al conectar con MercadoPago', 'danger')
+                return redirect(url_for('shop.my_orders'))
+
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        flash('Ocurrió un error al procesar tu compra. Por favor intentá de nuevo.', 'danger')
+        return redirect(url_for('shop.index'))
 
 
 @shop_bp.route('/payment/success')
 def payment_success():
-    # Esta ruta maneja dos llegadas:
-    # 1. Desde MercadoPago (trae ?collection_status=approved&external_reference=ID)
-    # 2. Desde Pago Local (trae ?order_id=ID)
+    try:
+        # Esta ruta maneja dos llegadas:
+        # 1. Desde MercadoPago (trae ?collection_status=approved&external_reference=ID)
+        # 2. Desde Pago Local (trae ?order_id=ID)
 
-    # Datos de MP
-    status = request.args.get('collection_status')
-    external_ref = request.args.get('external_reference')
-    
-    # Datos Locales
-    local_order_id = request.args.get('order_id')
-    
-    order = None
+        # Datos de MP
+        status = request.args.get('collection_status')
+        external_ref = request.args.get('external_reference')
+        
+        # Datos Locales
+        local_order_id = request.args.get('order_id')
+        
+        order = None
 
-    if status == 'approved' and external_ref:
-        order = Order.query.get(external_ref)
-        if order and order.status != 'paid':
-            order.status = 'paid'
-            db.session.commit()
-            flash('¡Pago acreditado!', 'success')
-            
-    elif local_order_id:
-        order = Order.query.get(local_order_id)
-        # No cambiamos a 'paid', sigue 'pending'
-    
-    if not order:
-        return redirect(url_for('shop.my_orders'))
+        if status == 'approved' and external_ref:
+            order = Order.query.get(external_ref)
+            if order and order.status != 'paid':
+                order.status = 'paid'
+                db.session.commit()
+                flash('¡Pago acreditado!', 'success')
+                
+        elif local_order_id:
+            order = Order.query.get(local_order_id)
+            # No cambiamos a 'paid', sigue 'pending'
+        
+        if not order:
+            return redirect(url_for('shop.my_orders'))
 
-    return render_template('shop/success.html', order=order)
+        return render_template('shop/success.html', order=order)
+
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        flash('Ocurrió un error al verificar tu pago. Revisá tus órdenes.', 'danger')
+        return redirect(url_for('shop.landing'))
 @shop_bp.route('/payment/failure')
 def payment_failure():
     # Si falla, podríamos querer devolver el stock, pero por ahora avisamos

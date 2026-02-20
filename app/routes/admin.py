@@ -1,3 +1,4 @@
+import traceback
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, current_app
 from flask_login import login_required, current_user
 from functools import wraps
@@ -32,25 +33,31 @@ def dashboard():
 @admin_required
 def create_product():
     if request.method == 'POST':
-        name = request.form.get('name')
-        price = float(request.form.get('price'))
-        stock = int(request.form.get('stock'))
-        description = request.form.get('description')
-        image_url = request.form.get('image_url')
-        category = request.form.get('category') # <--- AGREGADO: Capturar categoría
-        
-        product = Product(
-            name=name, 
-            price=price, 
-            stock=stock, 
-            description=description, 
-            image_url=image_url,
-            category=category # <--- AGREGADO: Guardar categoría
-        )
-        db.session.add(product)
-        db.session.commit()
-        flash('Producto creado exitosamente.', 'success')
-        return redirect(url_for('admin.dashboard'))
+        try:
+            name = request.form.get('name')
+            price = float(request.form.get('price'))
+            stock = int(request.form.get('stock'))
+            description = request.form.get('description')
+            image_url = request.form.get('image_url')
+            category = request.form.get('category')
+            
+            product = Product(
+                name=name, 
+                price=price, 
+                stock=stock, 
+                description=description, 
+                image_url=image_url,
+                category=category
+            )
+            db.session.add(product)
+            db.session.commit()
+            flash('Producto creado exitosamente.', 'success')
+            return redirect(url_for('admin.dashboard'))
+        except Exception as e:
+            db.session.rollback()
+            traceback.print_exc()
+            flash('Error al crear el producto. Intentá de nuevo.', 'danger')
+            return redirect(url_for('admin.dashboard'))
         
     return render_template('admin/product_form.html', action='Crear')
 
@@ -60,28 +67,37 @@ def edit_product(id):
     product = Product.query.get_or_404(id)
     
     if request.method == 'POST':
-        product.name = request.form.get('name')
-        product.price = float(request.form.get('price'))
-        product.stock = int(request.form.get('stock'))
-        product.description = request.form.get('description')
-        product.image_url = request.form.get('image_url')
-        product.category = request.form.get('category') # <--- AGREGADO: Actualizar categoría
-        
-        db.session.commit()
-        flash('Producto actualizado.', 'success')
-        return redirect(url_for('admin.dashboard'))
+        try:
+            product.name = request.form.get('name')
+            product.price = float(request.form.get('price'))
+            product.stock = int(request.form.get('stock'))
+            product.description = request.form.get('description')
+            product.image_url = request.form.get('image_url')
+            product.category = request.form.get('category')
+            
+            db.session.commit()
+            flash('Producto actualizado.', 'success')
+            return redirect(url_for('admin.dashboard'))
+        except Exception as e:
+            db.session.rollback()
+            traceback.print_exc()
+            flash('Error al actualizar el producto. Intentá de nuevo.', 'danger')
+            return redirect(url_for('admin.dashboard'))
         
     return render_template('admin/product_form.html', product=product, action='Editar')
 
 @admin_bp.route('/product/delete/<int:id>')
 @admin_required
 def delete_product(id):
-    product = Product.query.get_or_404(id)
-    # Primero verificamos si tiene items de ordenes asociados para no romper la DB
-    # (Aunque nuestro script de limpieza ya se encargó, esto es seguridad extra)
-    db.session.delete(product)
-    db.session.commit()
-    flash('Producto eliminado.', 'info')
+    try:
+        product = Product.query.get_or_404(id)
+        db.session.delete(product)
+        db.session.commit()
+        flash('Producto eliminado.', 'info')
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        flash('Error al eliminar el producto. Intentá de nuevo.', 'danger')
     return redirect(url_for('admin.dashboard'))
 
 @admin_bp.route('/import/products', methods=['POST'])
@@ -182,27 +198,32 @@ def orders():
 @admin_bp.route('/order/status/<int:order_id>/<string:new_status>')
 @admin_required
 def update_order_status(order_id, new_status):
-    order = Order.query.get_or_404(order_id)
-    allowed_statuses = ['paid', 'shipped', 'cancelled']
-    
-    if new_status not in allowed_statuses:
-        flash('Estado no válido.', 'danger')
-        return redirect(url_for('admin.orders'))
-    
-    # Devolver stock si se cancela
-    if new_status == 'cancelled' and order.status != 'cancelled':
-        for item in order.items:
-            if item.product:
-                item.product.stock += item.quantity
-        flash('Orden cancelada y stock restaurado.', 'info')
-    
-    if new_status == 'shipped':
-        flash(f'¡Orden #{order.id} archivada en el Historial!', 'success')
-    else:
-        flash(f'Estado actualizado a: {new_status}', 'success')
+    try:
+        order = Order.query.get_or_404(order_id)
+        allowed_statuses = ['paid', 'shipped', 'cancelled']
+        
+        if new_status not in allowed_statuses:
+            flash('Estado no válido.', 'danger')
+            return redirect(url_for('admin.orders'))
+        
+        # Devolver stock si se cancela
+        if new_status == 'cancelled' and order.status != 'cancelled':
+            for item in order.items:
+                if item.product:
+                    item.product.stock += item.quantity
+            flash('Orden cancelada y stock restaurado.', 'info')
+        
+        if new_status == 'shipped':
+            flash(f'¡Orden #{order.id} archivada en el Historial!', 'success')
+        else:
+            flash(f'Estado actualizado a: {new_status}', 'success')
 
-    order.status = new_status
-    db.session.commit()
+        order.status = new_status
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        flash('Error al actualizar el estado de la orden.', 'danger')
     
     return redirect(url_for('admin.orders'))
 

@@ -17,6 +17,13 @@ class Config:
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # --- FIX PARA NEON (SERVERLESS DB) ---
+    # Esto evita el error 500 cuando la base de datos se despierta
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+    }
+    
     # --- MERCADOPAGO ---
     # Lee las variables seguras que configuraste
     MP_PUBLIC_KEY = os.environ.get('MP_PUBLIC_KEY')
