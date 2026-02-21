@@ -182,6 +182,38 @@ def import_products():
 
     return redirect(url_for('admin.dashboard'))
 
+@admin_bp.route('/export/products')
+@admin_required
+def export_products():
+    try:
+        # Obtenemos todos los productos (ordenados por ID para mantener consistencia)
+        products = Product.query.order_by(Product.id.asc()).all()
+        
+        data = []
+        for p in products:
+            data.append({
+                'Nombre': p.name,
+                'Precio': p.price,
+                'Stock': p.stock,
+                'Descripcion': p.description,
+                'Categoria': p.category
+            })
+        
+        df = pd.DataFrame(data)
+        output = io.BytesIO()
+        
+        # utf-8-sig le dice a Excel que esto es UTF-8, arreglando los acentos al hacer doble clic
+        df.to_csv(output, index=False, encoding='utf-8-sig')
+        output.seek(0)
+
+        filename = f"Catalogo_Insumos_{datetime.now().strftime('%Y_%m_%d')}.csv"
+        return send_file(output, download_name=filename, as_attachment=True, mimetype='text/csv')
+
+    except Exception as e:
+        traceback.print_exc()
+        flash(f'Error al exportar los productos: {str(e)}', 'danger')
+        return redirect(url_for('admin.dashboard'))
+
 # --- RUTAS DE GESTIÓN DE ÓRDENES ---
 
 @admin_bp.route('/orders')

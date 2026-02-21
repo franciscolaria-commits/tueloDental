@@ -6,7 +6,7 @@
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
         <h2 class="mb-0 h4 fw-bold text-primary"><i class="bi bi-sliders"></i> Panel de Control</h2>
 
-        <div class="d-grid gap-2 d-md-flex">
+        <div class="d-grid gap-2 d-md-flex align-items-center">
             <a href="{{ url_for('admin.orders') }}" class="btn btn-warning text-dark fw-bold shadow-sm">
                 <i class="bi bi-inbox-fill"></i> Ver Pedidos
             </a>
@@ -19,6 +19,12 @@
                 data-bs-target="#importModal">
                 <i class="bi bi-file-earmark-spreadsheet"></i> Importar Excel
             </button>
+
+            <a href="{{ url_for('admin.export_products') }}"
+                class="btn btn-outline-secondary shadow-sm bg-white text-dark"
+                title="Descargar CSV con el formato de carga">
+                <i class="bi bi-download"></i> CSV
+            </a>
         </div>
     </div>
 
