@@ -71,7 +71,10 @@
         // Usamos fetch para poder recibir la respuesta del cerebro (Python)
         fetch(CONFIG.api_endpoint, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true'
+            },
             body: JSON.stringify(payload)
         })
             .then(response => response.json())
@@ -95,10 +98,6 @@
             keepalive: true
         }).catch(err => console.error('❌ Vibe Sync Error:', err));
     }
-
-    // ────────────────────────────────────────────────────────
-    // 3. CAPA DE UI (TOAST NOTIFICATIONS)
-    // ────────────────────────────────────────────────────────
 
     // ────────────────────────────────────────────────────────
     // 3. CAPA DE UI PREMIUM (TOAST NOTIFICATIONS)
