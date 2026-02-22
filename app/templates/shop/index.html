@@ -74,7 +74,9 @@
                 <div class="col">
                     <a href="{{ url_for('shop.product_detail', product_id=product.id) }}" class="text-decoration-none"
                         style="color: inherit;">
-                        <div class="card h-100 shadow-sm border-0 product-card bg-white">
+
+                        <div class="card h-100 shadow-sm border-0 product-card bg-white" data-vibe="track"
+                            data-vibe-id="{{ product.name }}">
                             <div class="position-absolute top-0 end-0 m-2">
                                 <span class="badge bg-white text-secondary border shadow-sm">{{ product.category
                                     }}</span>
