@@ -10,7 +10,7 @@
     // 1. CONFIGURACIÓN & ESTADO
     // ────────────────────────────────────────────────────────
     const CONFIG = {
-        api_endpoint: 'https://lannie-fumiest-ricki.ngrok-free.dev/api/track',
+        api_endpoint: ' https://lannie-fumiest-ricki.ngrok-free.dev/api/track',
         thresholds: {
             visibility: 0.5,      // 50% visible
             time_visible: 2000,   // 2 segundos
