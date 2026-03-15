@@ -610,7 +610,10 @@
         try {
             const response = await fetch(CONFIG.api_endpoint, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true' // <-- Fuerza a Ngrok a dejar pasar la API
+                },
                 body: JSON.stringify(payload)
             });
 
