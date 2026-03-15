@@ -221,27 +221,24 @@
     </style>
     <script>
         // 1. Apuntar a tu túnel temporal
-        window.VIBE_API_URL = " https://lannie-fumiest-ricki.ngrok-free.dev";
-
-        // 2. ID estricto para tu tienda de prueba
+        window.VIBE_API_URL = "https://a1b2-c3d4.ngrok-free.app/api/track";
         window.VIBE_STORE_ID = "tienda_flask_prod";
     </script>
-    <script src="ruta_a_tu_vibe.js"></script>
+
+    <script src="{{ url_for('static', filename='vibe.js') }}"></script>
 
     <script>
-        // 3. Fase 4.2: Inyección dura del estado con Jinja2
+        // 3. Fase 4.2: Inyección segura con tojson
         document.addEventListener("DOMContentLoaded", function () {
-            if (window.VibeAgent) {
-                window.VibeAgent.updateCart({
-                    items: [
-                        {% for item in session.get('cart', []) %}
-                    {
-                        name: "{{ item.name }}",
-                        qty: {{ item.quantity }}
-        }{% if not loop.last %}, {% endif %}
-        {% endfor %}
-                ],
-        total: { { cart_total | default (0) } }
+            // Inyecta las variables de Flask directamente como objetos JS nativos
+            const cartItems = {{ session.get('cart', []) | tojson
+        }};
+        const cartTotal = {{ cart_total | default (0) | tojson }};
+
+        if (window.VibeAgent) {
+            window.VibeAgent.updateCart({
+                items: cartItems,
+                total: cartTotal
             });
         }
     });
