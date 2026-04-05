@@ -219,30 +219,6 @@
             }
         }
     </style>
-    <!-- <script>
-        // 1. Apuntar a tu túnel temporal
-        window.VIBE_API_URL = "https://a1b2-c3d4.ngrok-free.app/api/track";
-        window.VIBE_STORE_ID = "tienda_flask_prod";
-    </script>
-
-    <script src="{{ url_for('static', filename='vibe.js') }}"></script>
-
-    <script>
-        // 3. Fase 4.2: Inyección segura con tojson
-        document.addEventListener("DOMContentLoaded", function () {
-            // Inyecta las variables de Flask directamente como objetos JS nativos
-            const cartItems = {{ session.get('cart', []) | tojson
-        }};
-        const cartTotal = {{ cart_total | default (0) | tojson }};
-
-        if (window.VibeAgent) {
-            window.VibeAgent.updateCart({
-                items: cartItems,
-                total: cartTotal
-            });
-        }
-    });
-    </script> -->
 </body>
 
 </html>
